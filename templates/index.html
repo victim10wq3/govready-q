@@ -5,13 +5,52 @@
 Welcome to Compliance Automation
 {% endblock %}
 
+{% block head %}
+<style>
+  .btn .glyphicon { margin-right: 6px; }
+  .btn.btn-success .glyphicon { color: #FFF; }
+
+  h1.mini {
+    font-size: 16px;
+    font-family: Hind, sands-serif;
+    line-height: 22px;
+    color: rgba(51, 51, 51);
+    padding: 0px 0px 0px 0px;
+    margin: 0px 0px 0px 0px;
+  }
+
+  .luna-box {
+    border: 1px solid rgb(210, 210, 210);
+    min-height: 160px;
+    margin-top: 30px;
+    border-radius: 4px;
+    padding: 20px 20px 0px 0px;
+  }
+
+  .luna-box div.glyphicon {
+    font-size:3em;
+    color: rgb(160, 210, 160);
+    margin:30px 0px 0px 40px;
+  }
+
+  .control-lookup {
+    display: inline;
+    float: left;
+    margin-right: 24px;
+    margin-bottom: 12px;
+  }
+
+</style>
+{% endblock %}
+
 {% block body-wide %}
 
 <div class="container">
   <div class="row">
-    <div class="col-md-7" style="margin: 40px 0px 30px 0px;">
+    <div class="col-md-7" style="margin: 22px 0px 30px 0px;">
       <h1>GovReady-Q</h1>
-      <p>A better way to assess and support compliance</p>
+      <p>A roadmap for your compliance journey</p>
+      {% comment %}
       <ul>
         <li><a href="https://govready-q.readthedocs.io/en/latest/introduction.html#why-govready-q">Why GovReady-Q?</a></li>
         <li><a href="https://github.com/govready/govready-q">GovReady-Q on GitHub</a></li>
@@ -21,9 +60,59 @@ Welcome to Compliance Automation
       <ul>
         <li><a href="/privacy">Privacy Policy</a></li>
         <li><a href="/terms-of-service">Terms of Service</a></li>
-      </ul>
+      </ul> {% endcomment %}
+    <div class="row">
+      <div class="col-sm-12">
+        <div class="luna-box">
+          <div class="col-md-3">
+            <div class="glyphicon glyphicon glyphicon-list-alt"></div>
+          </div>
+          <div class="col-md-9">
+            <h3><a id="new-project" onclick="show_select_portfolio_modal(); return false;" href="#"">Control lookup</a></h3>
+            <p>Look up an 800-53 or 800-171 control.
+            </p>
+            <form class="control-lookup" method="get" action="/controls/" onsubmit="show_control_by_id(); return false;">
+                <input type="text" name="id" placeholder="Enter control id" value="" style="width:120px;">
+                    <button type="submit" class="btn btn-success">Look up</button>
+                    <!-- &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    <a href="/">families</a> -->
+              </form>
+          </div>
+        </div>
+      </div>
+
+      {% comment %} <div class="col-sm-12">
+        <div class="luna-box">
+          <div class="col-md-3">
+            <div class="glyphicon glyphicon-heart-empty"></div>
+          </div>
+          <div class="col-md-9">
+            <h3><a href="love-assessments">Fall in love with assessments</a></h3>
+            <p>Assessing, learning, and improving is one of the most powerful things about being human.
+            </p>
+          </div>
+        </div>
+      </div> {% endcomment %}
+
+      <div class="col-sm-12">
+        <div class="luna-box">
+          <div class="col-md-3">
+            <div class="glyphicon glyphicon-duplicate"></div>
+          </div>
+          <div class="col-md-9">
+            <h3><a href="https://govready-q.readthedocs.org">Learn more about GovReady-Q</a></h3>
+            <p>Checkout our documentation to learn how to take full advantage of GovReady-Q.
+            </p>
+          </div>
+        </div>
+      </div>
+</div>
+
+
+
+
     </div>
-    <div class="col-md-5" style="margin: 40px 0px 30px 0px;">
+    <div class="col-md-5" style="margin: 50px 0px 30px 0px;">
       <!-- Nav tabs -->
       <ul class="nav nav-tabs" role="tablist">
         {% if not hide_registration%}
@@ -111,4 +200,23 @@ $('#id_title').on('keyup', function() {
 smooth_scroll_to($('input[name=action][value={{request.POST.action|escapejs}}]').parent('form'));
 {% endif %}
 </script>
+
+  <script>
+    // Submits control id for Control look up box
+    function show_control_by_id() {
+      var control_id = $('.control-lookup').find('input[name="id"]').val();
+      regex = RegExp('^[0-9]\.[0-9]{1,2}')
+      if (control_id.length < 1) {
+        var url = "/controls/";
+      } else if (regex.test(control_id)) {
+        // 800-171 control id?
+        var url = "/controls/catalogs/NIST_SP-800-171_rev1/control/"+control_id;
+      } else {
+        // Treat as 800-53 Rev 4 control id
+        var url = "/controls/catalogs/NIST_SP-800-53_rev4/control/"+control_id;
+      }
+      window.location.href = url;
+    }
+  </script>
+  
 {% endblock %}
