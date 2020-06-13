@@ -57,7 +57,7 @@ Remove contextbar from top of page
         <div id="tab-content" class="col-xs-3 col-sm-3 col-md-3 col-lg-3 col-xl-3">{{ catalog.catalog_key_display }}</div>
     </div>
    {% for group in control_groups %}
-    <div id="tab-content" class="row row-control" style="">
+    <div id="tab-content" class="row row-control primary-content" style="">
         <div id="" class="col-xs-2 col-sm-2 col-md-2 col-lg-2 col-xl-2">
             <a href="/controls/catalogs/{{ catalog.catalog_key }}/group/{{ group.id }}">{{ group.id|upper }}</a>
         </div>

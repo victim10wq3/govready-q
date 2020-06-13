@@ -9,6 +9,7 @@
 {% endblock %}
 
 {% block head %}
+{% include "controls/_style-controls.html" %}
 <style>
   .project-image {
     width: 20px;
@@ -135,6 +136,7 @@ Remove contextbar from top of page
   </div>
 
   <div id="tab-content" class="row">
+    <div id="" class="col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xl-12 primary-content">
     <!-- Nav tabs -->
     <ul class="nav nav-tabs" role="tablist">
       <li role="presentation" class="active"><a href="#control" aria-controls="control" role="tab" data-toggle="tab"><span class="glyphicon glyphicon-book"></span> Control</a></li>
@@ -273,7 +275,7 @@ Remove contextbar from top of page
             {% endfor %}
           </div><!--/smt-list-->
           <div><h3><button type="submit" class="small btn btn-md btn-success" style="color: white;" onclick="add_smt()">Add component statement</button></h3></div>
-
+</div>
       </div>
 
     </div>
