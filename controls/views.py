@@ -227,13 +227,13 @@ def system_element(request, system_id, element_id):
         # Get the impl_smts contributed by this component to system
         impl_smts = element.statements_produced.filter(consumer_element=system.root_element)
 
-        # Retrieve used catalog_key
+        # Retrieve current catalog_key
         catalog_key = impl_smts[0].sid_class
 
         # Retrieve control ids
         catalog_controls = Catalog.GetInstance(catalog_key=catalog_key).get_controls_all()
 
-        # Build OSCAL
+        # Build OSCAL for component
             # Example: https://github.com/usnistgov/OSCAL/blob/master/src/content/ssp-example/json/example-component.json
         of = {
                 "metadata": {
@@ -612,7 +612,7 @@ def editor(request, system_id, catalog_key, cl_id):
         # Retrieve any related Implementation Statements filtering by control and system.root_element
         impl_smts = Statement.objects.filter(sid=cl_id, consumer_element=system.root_element).order_by('pid')
 
-        # Build OSCAL
+        # Build OSCAL for control
         # Example: https://github.com/usnistgov/OSCAL/blob/master/content/ssp-example/json/ssp-example.json
         of = {
                 "system-security-plan": {
@@ -995,6 +995,121 @@ def assign_baseline(request, system_id, catalog_key, baseline_name):
         messages.add_message(request, messages.ERROR, 'Baseline "{} {}" assignment failed.'.format(catalog_key.replace("_", " "), baseline_name.title()))
 
     return HttpResponseRedirect("/systems/{}/controls/selected".format(system_id))
+
+# Export OSCAL
+
+def export_system_oscal(request, system_id):
+    """Export entire system in OpenControl"""
+
+    # Does user have permission
+    # Retrieve identified System
+    system = System.objects.get(id=system_id)
+    # Retrieve related selected controls if user has permission on system
+    if request.user.has_perm('view_system', system):
+        # Retrieve primary system Project
+        # Temporarily assume only one project and get first project
+        project = system.projects.all()[0]
+        oscal_string = ""
+
+        # Build basic SSP object
+        # TODO: Refactor this into a separate helper function
+        oscal_ssp_object = {
+                    "system-security-plan": {
+                        "id": "example-ssp",
+                        "metadata": {
+                            "title": "{} System Security Plan Excerpt".format(system.root_element.name),
+                            "published": datetime.now().replace(microsecond=0).isoformat(),
+                            "last-modified": "element.updated.replace(microsecond=0).isoformat()",
+                            "version": "1.0",
+                            "oscal-version": "1.0.0-milestone3",
+                            "roles": [],
+                            "parties": [],
+                            },
+                        "import-profile": {},
+                        "system-characteristics": {},
+                        "system-implementations": {},
+                        "control-implementation": {
+                            "description": "",
+                            "implemented-requirements": []
+                        },
+                        "back-matter": []
+                    }
+                }
+        # Loop through selected controls for system
+        controls = system.root_element.controls.all()
+        for control in controls:
+            # Get the cl_id from the control
+            cl_id = control.oscal_ctl_id
+            # Retrieve control implementation statements for the system for the control, ordered by control part
+            impl_smts = system.root_element.statements_consumed.filter(sid=cl_id, statement_type='control_implementation',).order_by('pid')
+            # Continue to next control if no control implementation statements are returned for control
+            if len(impl_smts) == 0:
+                continue;
+            # Process the control implementation statements for controls
+            # Retrieve current catalog_key
+            catalog_key = impl_smts[0].sid_class
+
+            # Retrieve control objects from catalog, including guidance
+            catalog_controls = Catalog.GetInstance(catalog_key=catalog_key).get_controls_all()
+
+            # Build OSCAL for control
+            # Example: https://github.com/usnistgov/OSCAL/blob/master/content/ssp-example/json/ssp-example.json
+            ctl_imp_reqs = {
+                               "control-id": "{}".format(cl_id),
+                               "description": "",
+                               "statements": {
+                                   "{}_smt".format(cl_id): {
+                                       "description": "N/A",
+                                       "by-components": {}
+                                   }
+                               } #statements
+                           }
+            # by_components = ctl_imp_reqs["statements"]["{}_smt".format(cl_id)]["by-components"]
+            for smt in impl_smts:
+                # print(smt.id, smt.body)
+                my_dict = {
+                            smt.sid + "_{}".format(smt.producer_element.name.replace(" ","-")): {
+                                "description": smt.body,
+                                "role-ids": "",
+                                "set-params": {},
+                                "remarks": smt.remarks
+                            },
+                         }
+                ctl_imp_reqs["statements"]["{}_smt".format(cl_id)]["by-components"].update(my_dict)
+            # oscal_string += json.dumps(of, sort_keys=False, indent=2)
+            # Append to SSP object
+            oscal_ssp_object["system-security-plan"]["control-implementation"]["implemented-requirements"].append(ctl_imp_reqs)
+
+        # Create temporary directory structure
+        import tempfile
+        temp_dir = tempfile.TemporaryDirectory(dir=".")
+        repo_path = os.path.join(temp_dir.name, system.root_element.name.replace(" ", "_"))
+        # print(temp_dir.name)
+        if not os.path.exists(repo_path):
+            os.makedirs(repo_path)
+
+        # Write out OSCAL SSP object to file
+        with open(os.path.join(repo_path, "oscal.json"), 'w') as outfile:
+            outfile.write(json.dumps(oscal_ssp_object, sort_keys=False, indent=2))
+
+        # Download OSCAL SSP JSON file
+        with open(os.path.join(repo_path, "oscal.json"), 'rb') as tmp:
+            tmp.seek(0)
+            stream = tmp.read()
+            blob = stream
+        mime_type = "application/octet-stream"
+        filename = "{}-OSCAL-{}.json".format(system.root_element.name.replace(" ","_"),datetime.now().strftime("%Y-%m-%d-%H-%M"))
+
+        resp = HttpResponse(blob, mime_type)
+        resp['Content-Disposition'] = 'inline; filename=' + filename
+
+        # Clean up
+        shutil.rmtree(repo_path)
+        return resp
+
+    else:
+        # User does not have permission to this system
+        raise Http404
 
 # Export OpenControl
 
