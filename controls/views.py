@@ -695,6 +695,7 @@ def editor(request, system_id, catalog_key, cl_id):
             "enable_experimental_oscal": SystemSettings.enable_experimental_oscal,
             "opencontrol": "opencontrol_string",
             "project_form": ProjectForm(request.user),
+            "elements": Element.objects.all().exclude(element_type='system'),
         }
         return render(request, "controls/editor.html", context)
     else:
